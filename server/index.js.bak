@@ -1,0 +1,343 @@
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const { AccessToken } = require('twilio').jwt;
+const VideoGrant = AccessToken.VideoGrant;
+const axios = require('axios');
+const { Deepgram } = require('@deepgram/sdk');
+const { v4: uuidv4 } = require('uuid');
+const WebSocket = require('ws');
+const http = require('http');
+
+// Load environment variables
+dotenv.config({ path: __dirname + '/.env' });
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Twilio credentials from environment variables
+const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+const twilioApiKeySid = process.env.TWILIO_API_KEY_SID;
+const twilioApiKeySecret = process.env.TWILIO_API_KEY_SECRET;
+
+// Deepgram API key from environment variables
+const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
+
+// Initialize Deepgram client
+const deepgram = new Deepgram({ apiKey: deepgramApiKey });
+
+// AssemblyAI credentials from environment variables
+const assemblyApiKey = process.env.ASSEMBLY_API_KEY;
+
+// In-memory store for transcripts (use a database in production)
+const transcripts = {};
+
+// Endpoint to generate Twilio access token
+app.post('/api/twilio/token', (req, res) => {
+  const { identity, roomName } = req.body;
+  
+  if (!identity || !roomName) {
+    return res.status(400).json({ error: 'Identity and room name are required' });
+  }
+
+  try {
+    console.log('Generating Twilio token with credentials:');
+    console.log('Account SID:', twilioAccountSid);
+    console.log('API Key SID:', twilioApiKeySid);
+    console.log('For identity:', identity);
+    console.log('Room name:', roomName);
+    
+    // Create an access token
+    const token = new AccessToken(
+      twilioAccountSid,
+      twilioApiKeySid,
+      twilioApiKeySecret,
+      { identity }
+    );
+
+    // Create a video grant and add it to the token
+    const videoGrant = new VideoGrant({ room: roomName });
+    token.addGrant(videoGrant);
+
+    // Serialize the token to a JWT string
+    const tokenString = token.toJwt();
+    console.log('Token generated successfully');
+    
+    res.json({
+      token: tokenString,
+      identity,
+      roomName
+    });
+  } catch (error) {
+    console.error('Error generating token:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate token',
+      message: error.message,
+      details: JSON.stringify(error)
+    });
+  }
+});
+
+// Endpoint to get AssemblyAI real-time transcription token
+app.get('/api/assembly/token', async (req, res) => {
+  try {
+    const response = await axios.post(
+      'https://api.assemblyai.com/v2/realtime/token',
+      { expires_in: 3600 }, // 1 hour token
+      {
+        headers: {
+          'Authorization': assemblyApiKey,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error getting AssemblyAI token:', error);
+    res.status(500).json({ error: 'Failed to get transcription token' });
+  }
+});
+
+// Endpoint to transcribe audio file
+app.post('/api/assembly/transcribe', async (req, res) => {
+  const { audioUrl } = req.body;
+  
+  if (!audioUrl) {
+    return res.status(400).json({ error: 'Audio URL is required' });
+  }
+  
+  try {
+    // Submit the audio file for transcription
+    const submitResponse = await axios.post(
+      'https://api.assemblyai.com/v2/transcript',
+      {
+        audio_url: audioUrl,
+        speaker_labels: true,
+        language_code: 'en_us'
+      },
+      {
+        headers: {
+          'Authorization': assemblyApiKey,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    
+    const transcriptId = submitResponse.data.id;
+    res.json({ transcriptId, status: 'processing' });
+  } catch (error) {
+    console.error('Error submitting transcription:', error);
+    res.status(500).json({ error: 'Failed to submit transcription' });
+  }
+});
+
+// Endpoint to check transcription status
+app.get('/api/assembly/transcript/:transcriptId', async (req, res) => {
+  const { transcriptId } = req.params;
+  
+  try {
+    const response = await axios.get(
+      `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
+      {
+        headers: {
+          'Authorization': assemblyApiKey,
+        }
+      }
+    );
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error checking transcription:', error);
+    res.status(500).json({ error: 'Failed to check transcription' });
+  }
+});
+
+// Endpoint to get Deepgram token for client-side use
+app.get('/api/deepgram/token', async (req, res) => {
+  try {
+    // Create a short-lived API key for client use
+    const key = await deepgram.keys.create({
+      comment: 'Hacerank Interview Session',
+      scopes: ['audio:write'],
+      time_to_live_in_seconds: 3600 // 1 hour
+    });
+    
+    res.json({ token: key.key });
+  } catch (error) {
+    console.error('Error generating Deepgram token:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate Deepgram token',
+      message: error.message 
+    });
+  }
+});
+
+// Endpoint to get all transcripts for a room
+app.get('/api/transcripts/:roomId', (req, res) => {
+  const { roomId } = req.params;
+  
+  if (!transcripts[roomId]) {
+    transcripts[roomId] = [];
+  }
+  
+  res.json(transcripts[roomId]);
+});
+
+// Endpoint to add a transcript to a room
+app.post('/api/transcripts/:roomId', (req, res) => {
+  const { roomId } = req.params;
+  const { speaker, text } = req.body;
+  
+  if (!speaker || !text) {
+    return res.status(400).json({ error: 'Speaker and text are required' });
+  }
+  
+  if (!transcripts[roomId]) {
+    transcripts[roomId] = [];
+  }
+  
+  const transcriptLine = {
+    id: uuidv4(),
+    speaker,
+    text,
+    timestamp: new Date().toISOString()
+  };
+  
+  transcripts[roomId].push(transcriptLine);
+  
+  // Broadcast to all connected WebSocket clients for this room
+  broadcastToRoom(roomId, {
+    type: 'transcript',
+    line: transcriptLine
+  });
+  
+  res.status(201).json(transcriptLine);
+});
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Create WebSocket server
+const wss = new WebSocket.Server({ noServer: true });
+
+// WebSocket connections by room
+const roomConnections = {};
+
+// Handle WebSocket connections
+wss.on('connection', (ws, req) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const roomId = url.searchParams.get('room');
+  const clientId = uuidv4();
+  
+  console.log(`New WebSocket connection: Client ${clientId} joined room ${roomId}`);
+  
+  if (!roomId) {
+    console.log('No room ID provided, closing connection');
+    ws.close();
+    return;
+  }
+  
+  // Initialize room if needed
+  if (!roomConnections[roomId]) {
+    roomConnections[roomId] = new Map();
+  }
+  
+  // Add this connection to the room
+  roomConnections[roomId].set(clientId, ws);
+  
+  // Initialize room transcript if needed
+  if (!transcripts[roomId]) {
+    transcripts[roomId] = [];
+  }
+  
+  // Send existing transcripts to new connection
+  ws.send(JSON.stringify({
+    type: 'init',
+    transcripts: transcripts[roomId]
+  }));
+  
+  // Handle messages from client
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message.toString());
+      
+      if (data.type === 'transcript') {
+        const { speaker, text } = data;
+        
+        if (!speaker || !text) {
+          return;
+        }
+        
+        const transcriptLine = {
+          id: uuidv4(),
+          speaker,
+          text,
+          timestamp: new Date().toISOString()
+        };
+        
+        transcripts[roomId].push(transcriptLine);
+        
+        // Broadcast to all clients in this room
+        broadcastToRoom(roomId, {
+          type: 'transcript',
+          line: transcriptLine
+        });
+      }
+    } catch (error) {
+      console.error('Error processing WebSocket message:', error);
+    }
+  });
+  
+  // Handle client disconnection
+  ws.on('close', () => {
+    console.log(`Client ${clientId} disconnected from room ${roomId}`);
+    if (roomConnections[roomId]) {
+      roomConnections[roomId].delete(clientId);
+      
+      // Clean up empty rooms
+      if (roomConnections[roomId].size === 0) {
+        delete roomConnections[roomId];
+      }
+    }
+  });
+});
+
+// Broadcast message to all clients in a room
+function broadcastToRoom(roomId, message) {
+  if (!roomConnections[roomId]) {
+    return;
+  }
+  
+  const messageString = JSON.stringify(message);
+  
+  roomConnections[roomId].forEach((ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(messageString);
+    }
+  });
+}
+
+// Upgrade HTTP server to support WebSockets
+server.on('upgrade', (request, socket, head) => {
+  const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+  
+  // Handle WebSocket connections for transcripts
+  if (pathname === '/transcripts') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  } else {
+    // Close the connection if the path is not recognized
+    socket.destroy();
+  }
+});
+
+// Start the server
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+}); 
