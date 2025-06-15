@@ -13,7 +13,7 @@ import ServerError from "./pages/ServerError";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
 import Interviews from "./pages/Interviews";
 import Candidates from "./pages/Candidates";
-import InterviewRoom from "./pages/InterviewRoom";
+
 import CandidateDashboard from "./pages/CandidateDashboard";
 import Schedule from "./pages/Schedule";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -107,15 +107,7 @@ const App = () => (
                 <Route path="*" element={<VideoCallPage />} />
               </Route>
               
-              {/* Legacy Interview Room (can be removed later) */}
-              <Route 
-                path="/interview-room-old" 
-                element={
-                  <ProtectedRoute>
-                    <InterviewRoom />
-                  </ProtectedRoute>
-                } 
-              />
+
               
               <Route 
                 path="/schedule" 

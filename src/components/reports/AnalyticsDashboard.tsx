@@ -13,48 +13,41 @@ import {
   Calendar
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 const AnalyticsDashboard = () => {
-  const interviewMetrics = [
-    { period: 'Jan', completed: 234, scheduled: 267, success_rate: 87.6 },
-    { period: 'Feb', completed: 289, scheduled: 321, success_rate: 90.2 },
-    { period: 'Mar', completed: 367, scheduled: 398, success_rate: 92.2 },
-    { period: 'Apr', completed: 412, scheduled: 445, success_rate: 92.6 },
-    { period: 'May', completed: 456, scheduled: 487, success_rate: 93.6 },
-    { period: 'Jun', completed: 523, scheduled: 558, success_rate: 93.7 }
-  ];
+  const { analytics, loading } = useAnalytics();
 
-  const performanceTrends = [
-    { month: 'Jan', coding_score: 78, communication: 82, problem_solving: 75, overall: 78.3 },
-    { month: 'Feb', coding_score: 81, communication: 84, problem_solving: 79, overall: 81.3 },
-    { month: 'Mar', coding_score: 83, communication: 86, problem_solving: 82, overall: 83.7 },
-    { month: 'Apr', coding_score: 85, communication: 87, problem_solving: 84, overall: 85.3 },
-    { month: 'May', coding_score: 87, communication: 89, problem_solving: 86, overall: 87.3 },
-    { month: 'Jun', coding_score: 89, communication: 91, problem_solving: 88, overall: 89.3 }
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tech-green"></div>
+        <p className="ml-3 text-text-secondary">Loading analytics...</p>
+      </div>
+    );
+  }
 
-  const departmentData = [
-    { name: 'Engineering', interviews: 342, hires: 89, success_rate: 26.0, color: '#39d353' },
-    { name: 'Product', interviews: 156, hires: 45, success_rate: 28.8, color: '#0969da' },
-    { name: 'Design', interviews: 89, hires: 23, success_rate: 25.8, color: '#f85149' },
-    { name: 'Marketing', interviews: 67, hires: 19, success_rate: 28.4, color: '#a5a5a5' },
-    { name: 'Sales', interviews: 134, hires: 42, success_rate: 31.3, color: '#f89406' }
-  ];
+  if (!analytics) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-text-secondary">No analytics data available</p>
+      </div>
+    );
+  }
 
-  const interviewerEffectiveness = [
-    { interviewer: 'John Smith', interviews: 89, avg_score: 8.7, hire_rate: 32.5, satisfaction: 4.8 },
-    { interviewer: 'Sarah Johnson', interviews: 76, avg_score: 8.9, hire_rate: 35.2, satisfaction: 4.9 },
-    { interviewer: 'Mike Chen', interviews: 92, avg_score: 8.4, hire_rate: 28.3, satisfaction: 4.6 },
-    { interviewer: 'Emily Davis', interviews: 67, avg_score: 9.1, hire_rate: 38.8, satisfaction: 4.9 },
-    { interviewer: 'Alex Rodriguez', interviews: 84, avg_score: 8.5, hire_rate: 29.8, satisfaction: 4.7 }
-  ];
-
+  const interviewMetrics = analytics.monthlyTrends;
+  const performanceTrends = analytics.performanceTrends;
+  const departmentData = analytics.departmentStats.map((dept, index) => ({
+    ...dept,
+    color: ['#39d353', '#0969da', '#f85149', '#a5a5a5', '#f89406'][index % 5]
+  }));
+  const interviewerEffectiveness = analytics.interviewerStats;
+  
+  // Mock time to hire data since it requires complex calculation
   const timeToHireData = [
-    { position: 'Senior Engineer', avg_days: 18, target: 21, interviews: 5.2 },
-    { position: 'Product Manager', avg_days: 24, target: 28, interviews: 4.8 },
-    { position: 'Designer', avg_days: 16, target: 18, interviews: 4.1 },
-    { position: 'Data Scientist', avg_days: 21, target: 25, interviews: 5.8 },
-    { position: 'DevOps Engineer', avg_days: 19, target: 22, interviews: 4.9 }
+    { position: 'Senior Engineer', avg_days: analytics.timeToHire, target: 21, interviews: 5.2 },
+    { position: 'Product Manager', avg_days: analytics.timeToHire + 4, target: 28, interviews: 4.8 },
+    { position: 'Designer', avg_days: analytics.timeToHire - 4, target: 18, interviews: 4.1 }
   ];
 
   return (
@@ -66,7 +59,7 @@ const AnalyticsDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-text-secondary">Interview Completion Rate</p>
-                <p className="text-2xl font-bold text-text-primary mt-1">93.7%</p>
+                <p className="text-2xl font-bold text-text-primary mt-1">{analytics.completionRate}%</p>
                 <p className="text-sm mt-1 text-tech-green flex items-center">
                   <TrendingUp size={12} className="mr-1" />
                   +2.3% vs last month
@@ -82,7 +75,7 @@ const AnalyticsDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-text-secondary">Average Interview Score</p>
-                <p className="text-2xl font-bold text-text-primary mt-1">8.6/10</p>
+                <p className="text-2xl font-bold text-text-primary mt-1">{analytics.averageScore}/10</p>
                 <p className="text-sm mt-1 text-tech-green flex items-center">
                   <TrendingUp size={12} className="mr-1" />
                   +0.4 vs last month
@@ -98,7 +91,7 @@ const AnalyticsDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-text-secondary">Time to Hire</p>
-                <p className="text-2xl font-bold text-text-primary mt-1">19.6 days</p>
+                <p className="text-2xl font-bold text-text-primary mt-1">{analytics.timeToHire} days</p>
                 <p className="text-sm mt-1 text-tech-green flex items-center">
                   <TrendingDown size={12} className="mr-1" />
                   -1.2 days vs target
@@ -114,7 +107,7 @@ const AnalyticsDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-text-secondary">Hire Success Rate</p>
-                <p className="text-2xl font-bold text-text-primary mt-1">31.2%</p>
+                <p className="text-2xl font-bold text-text-primary mt-1">{analytics.hireRate}%</p>
                 <p className="text-sm mt-1 text-tech-green flex items-center">
                   <TrendingUp size={12} className="mr-1" />
                   +3.1% vs last quarter
@@ -142,7 +135,7 @@ const AnalyticsDashboard = () => {
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={interviewMetrics}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-                <XAxis dataKey="period" stroke="#8b949e" />
+                <XAxis dataKey="month" stroke="#8b949e" />
                 <YAxis stroke="#8b949e" />
                 <Tooltip 
                   contentStyle={{ 

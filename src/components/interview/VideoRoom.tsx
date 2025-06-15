@@ -24,12 +24,14 @@ interface VideoRoomProps {
   roomName: string;
   identity: string;
   onTranscriptUpdate?: (transcript: string) => void;
+  className?: string;
 }
 
 export const VideoRoom: React.FC<VideoRoomProps> = ({ 
   roomName, 
   identity,
-  onTranscriptUpdate 
+  onTranscriptUpdate,
+  className 
 }) => {
   const [room, setRoom] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
@@ -55,11 +57,17 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
           // Import the module properly
           const twilioModule = await import('twilio-video');
           Video = twilioModule.default || twilioModule;
-          console.log('Twilio Video loaded successfully:', Video);
+          console.log('Twilio Video loaded successfully:', !!Video);
+          
+          // Set loading to false once Twilio is loaded
+          if (Video) {
+            setLoading(false);
+          }
         }
       } catch (err) {
         console.error('Error loading Twilio Video:', err);
-        setError('Failed to load video library');
+        setError('Failed to load video library. Please refresh the page.');
+        setLoading(false);
       }
     };
     
@@ -118,16 +126,21 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
     
     const joinRoom = async () => {
       try {
-        setLoading(true);
+        console.log('Attempting to join room:', roomName, 'as:', identity);
         
         // Get token from server
+        console.log('Requesting token from:', API_ENDPOINTS.TWILIO_TOKEN);
         const response = await axios.post(API_ENDPOINTS.TWILIO_TOKEN, {
           identity,
           roomName
         });
         
+        if (!response.data || !response.data.token) {
+          throw new Error('No token received from server');
+        }
+        
         const { token } = response.data;
-        console.log('Received token from server');
+        console.log('Received token from server, length:', token.length);
         
         // Connect to the room with options
         const connectOptions = {
@@ -364,7 +377,15 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   // Handle remote participant connected
   const handleRemoteParticipantConnected = (participant: any) => {
     console.log('Setting up remote participant:', participant.identity);
-    setParticipants(prevParticipants => [...prevParticipants, participant]);
+    setParticipants(prevParticipants => {
+      // Check if participant already exists to avoid duplicates
+      const existingParticipant = prevParticipants.find(p => p.sid === participant.sid);
+      if (existingParticipant) {
+        console.log(`Participant ${participant.identity} already exists, not adding duplicate`);
+        return prevParticipants;
+      }
+      return [...prevParticipants, participant];
+    });
     
     // Handle tracks that are already published
     participant.tracks.forEach((publication: any) => {
@@ -411,19 +432,20 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
         const videoElement = participantDiv.querySelector('video');
         if (videoElement) {
           try {
-            // First detach any existing tracks
-            track.detach().forEach((element: HTMLMediaElement) => {
-              element.remove();
-            });
-            
-            // Then attach the track to the element
-            track.attach(videoElement);
+            // Attach the track to the element without removing existing elements
+            const attachedElements = track.attach(videoElement);
             console.log(`Attached ${participant.identity}'s video track to element`);
             
-            // Ensure the video plays
-            videoElement.play().catch(err => {
-              console.error('Error playing remote video:', err);
-            });
+            // Handle video play promise properly
+            const playPromise = videoElement.play();
+            if (playPromise !== undefined) {
+              playPromise.then(() => {
+                console.log(`Remote video playing for ${participant.identity}`);
+              }).catch(err => {
+                console.error('Error playing remote video:', err);
+                // Don't throw error, just log it
+              });
+            }
           } catch (err) {
             console.error(`Error attaching ${participant.identity}'s video:`, err);
             
@@ -433,7 +455,10 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
               if (track.mediaStreamTrack) {
                 const mediaStream = new MediaStream([track.mediaStreamTrack]);
                 videoElement.srcObject = mediaStream;
-                videoElement.play().catch(console.error);
+                const playPromise = videoElement.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch(console.error);
+                }
               }
             } catch (altErr) {
               console.error('Alternative approach failed:', altErr);
@@ -462,17 +487,20 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   
   // Handle track unsubscribed
   const handleTrackUnsubscribed = (track: any, participant: any) => {
-    track.detach().forEach((element: HTMLMediaElement) => {
-      console.log(`Detached ${participant.identity}'s ${track.kind} track from element`);
-      element.remove();
-    });
+    try {
+      const detachedElements = track.detach();
+      console.log(`Detached ${participant.identity}'s ${track.kind} track from ${detachedElements.length} element(s)`);
+      // Don't remove elements, just detach tracks to avoid DOM issues
+    } catch (err) {
+      console.error(`Error detaching ${participant.identity}'s ${track.kind} track:`, err);
+    }
   };
   
   // Handle remote participant disconnected
   const handleRemoteParticipantDisconnected = (participant: any) => {
     console.log(`Cleaning up after participant ${participant.identity}`);
     setParticipants(prevParticipants => 
-      prevParticipants.filter(p => p.identity !== participant.identity)
+      prevParticipants.filter(p => p.sid !== participant.sid)
     );
   };
   
@@ -581,7 +609,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   const renderParticipant = (participant: any) => {
     return (
       <div 
-        key={participant.identity} 
+        key={participant.sid} 
         id={participant.sid}
         className="participant-container bg-dark-primary rounded-lg overflow-hidden relative mb-4"
       >
@@ -627,7 +655,7 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   }
   
   return (
-    <div className="video-room h-full flex flex-col">
+    <div className={`video-room h-full flex flex-col ${className || ''}`}>
       <div className="flex-1 flex flex-col md:flex-row gap-4 p-4 overflow-auto">
         {/* Local video */}
         <div className="local-participant w-full md:w-1/2">
@@ -710,4 +738,4 @@ export const VideoRoom: React.FC<VideoRoomProps> = ({
   );
 };
 
-export default VideoRoom; 
+export default VideoRoom;

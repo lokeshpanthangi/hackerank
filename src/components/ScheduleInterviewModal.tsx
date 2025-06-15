@@ -21,6 +21,10 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useInterviews } from '@/hooks/useInterviews';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { useCandidates } from '@/hooks/useCandidates';
 
 interface ScheduleInterviewModalProps {
   onClose: () => void;
@@ -28,10 +32,14 @@ interface ScheduleInterviewModalProps {
 
 interface Candidate {
   id: string;
-  name: string;
   email: string;
-  position: string;
-  avatar: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  phone: string | null;
+  role: 'admin' | 'recruiter' | 'candidate';
+  created_at: string;
+  updated_at: string;
 }
 
 interface Template {
@@ -56,16 +64,14 @@ const ScheduleInterviewModal = ({ onClose }: ScheduleInterviewModalProps) => {
     timezone: 'PST'
   });
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { createInterview } = useInterviews();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { candidates, loading: candidatesLoading } = useCandidates();
 
   const totalSteps = 5;
-
-  // Mock data
-  const candidates: Candidate[] = [
-    { id: '1', name: 'Alex Turner', email: 'alex.turner@email.com', position: 'Frontend Developer', avatar: 'AT' },
-    { id: '2', name: 'Maria Garcia', email: 'maria.garcia@email.com', position: 'Full Stack Engineer', avatar: 'MG' },
-    { id: '3', name: 'John Smith', email: 'john.smith@email.com', position: 'Backend Developer', avatar: 'JS' },
-    { id: '4', name: 'Jennifer Lee', email: 'jennifer.lee@email.com', position: 'DevOps Engineer', avatar: 'JL' },
-  ];
 
   const templates: Template[] = [
     {
@@ -102,11 +108,11 @@ const ScheduleInterviewModal = ({ onClose }: ScheduleInterviewModalProps) => {
     }
   ];
 
-  const filteredCandidates = candidates.filter(candidate =>
-    candidate.name.toLowerCase().includes(candidateSearch.toLowerCase()) ||
-    candidate.email.toLowerCase().includes(candidateSearch.toLowerCase()) ||
-    candidate.position.toLowerCase().includes(candidateSearch.toLowerCase())
-  );
+  const filteredCandidates = candidates.filter(candidate => {
+    const fullName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim();
+    return fullName.toLowerCase().includes(candidateSearch.toLowerCase()) ||
+           candidate.email.toLowerCase().includes(candidateSearch.toLowerCase());
+  });
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -129,14 +135,65 @@ const ScheduleInterviewModal = ({ onClose }: ScheduleInterviewModalProps) => {
     }
   };
 
-  const handleSchedule = () => {
-    // Here you would typically submit the interview data
-    console.log('Scheduling interview:', {
-      candidate: selectedCandidate,
-      details: interviewDetails,
-      template: selectedTemplate
-    });
-    onClose();
+  const handleSchedule = async () => {
+    if (!selectedCandidate || !interviewDetails.date || !interviewDetails.time || !user) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Combine date and time into a proper datetime
+      const scheduledDateTime = new Date(interviewDetails.date);
+      const [hours, minutes] = interviewDetails.time.split(':').map(Number);
+      scheduledDateTime.setHours(hours, minutes, 0, 0);
+
+      const interviewData = {
+        candidate_id: selectedCandidate.id,
+        recruiter_id: user.id,
+        job_position_id: null, // You might want to add job position selection
+        title: `Interview with ${selectedCandidate.first_name} ${selectedCandidate.last_name}`,
+        description: interviewDetails.description,
+        scheduled_at: scheduledDateTime.toISOString(),
+        duration_minutes: parseInt(interviewDetails.duration),
+        status: 'scheduled' as const,
+        meeting_url: null,
+        notes: interviewDetails.description,
+        overall_score: null,
+        feedback: null
+      };
+
+      const result = await createInterview(interviewData);
+      
+      if (result.error) {
+        toast({
+          title: "Error",
+          description: "Failed to schedule interview. Please try again.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Interview scheduled successfully!",
+          variant: "default"
+        });
+        onClose();
+      }
+    } catch (error) {
+      console.error('Error scheduling interview:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isStepValid = () => {
@@ -170,33 +227,48 @@ const ScheduleInterviewModal = ({ onClose }: ScheduleInterviewModalProps) => {
             </div>
 
             <div className="grid gap-3 max-h-64 overflow-y-auto">
-              {filteredCandidates.map((candidate) => (
-                <Card 
-                  key={candidate.id} 
-                  className={`cursor-pointer transition-colors ${
-                    selectedCandidate?.id === candidate.id 
-                      ? 'bg-tech-green/10 border-tech-green' 
-                      : 'bg-dark-primary border-border-dark hover:border-tech-green/50'
-                  }`}
-                  onClick={() => setSelectedCandidate(candidate)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-tech-green/20 rounded-full flex items-center justify-center">
-                        <span className="text-tech-green font-semibold text-sm">{candidate.avatar}</span>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-text-primary">{candidate.name}</h4>
-                        <p className="text-sm text-text-secondary">{candidate.email}</p>
-                        <p className="text-xs text-text-secondary">{candidate.position}</p>
-                      </div>
-                      {selectedCandidate?.id === candidate.id && (
-                        <Check size={16} className="text-tech-green" />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {candidatesLoading ? (
+                <div className="text-center py-4 text-text-secondary">Loading candidates...</div>
+              ) : filteredCandidates.length === 0 ? (
+                <div className="text-center py-4 text-text-secondary">No candidates found</div>
+              ) : (
+                filteredCandidates.map((candidate) => {
+                  const fullName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim();
+                  const initials = `${candidate.first_name?.[0] || ''}${candidate.last_name?.[0] || ''}`.toUpperCase();
+                  
+                  return (
+                    <Card 
+                      key={candidate.id} 
+                      className={`cursor-pointer transition-colors ${
+                        selectedCandidate?.id === candidate.id 
+                          ? 'bg-tech-green/10 border-tech-green' 
+                          : 'bg-dark-primary border-border-dark hover:border-tech-green/50'
+                      }`}
+                      onClick={() => setSelectedCandidate(candidate)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-tech-green/20 rounded-full flex items-center justify-center">
+                            {candidate.avatar_url ? (
+                              <img src={candidate.avatar_url} alt={fullName} className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                              <span className="text-tech-green font-semibold text-sm">{initials}</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-text-primary">{fullName || 'No Name'}</h4>
+                            <p className="text-sm text-text-secondary">{candidate.email}</p>
+                            <p className="text-xs text-text-secondary">Candidate</p>
+                          </div>
+                          {selectedCandidate?.id === candidate.id && (
+                            <Check size={16} className="text-tech-green" />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
           </div>
         );
@@ -495,10 +567,10 @@ const ScheduleInterviewModal = ({ onClose }: ScheduleInterviewModalProps) => {
         {currentStep === totalSteps ? (
           <Button
             onClick={handleSchedule}
-            disabled={!isStepValid()}
+            disabled={!isStepValid() || isSubmitting}
             className="bg-tech-green hover:bg-tech-green/90 text-dark-primary font-semibold disabled:opacity-50"
           >
-            Schedule Interview
+            {isSubmitting ? 'Scheduling...' : 'Schedule Interview'}
           </Button>
         ) : (
           <Button

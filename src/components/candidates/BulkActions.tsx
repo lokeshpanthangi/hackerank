@@ -7,10 +7,18 @@ import {
   Download, 
   Tag, 
   Trash2,
-  Users
+  Users,
+  CalendarIcon,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -19,16 +27,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useInterviews } from '@/hooks/useInterviews';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface BulkActionsProps {
   selectedCount: number;
+  selectedCandidateIds: string[];
   onClearSelection: () => void;
 }
 
-export const BulkActions = ({ selectedCount, onClearSelection }: BulkActionsProps) => {
+export const BulkActions = ({ selectedCount, selectedCandidateIds, onClearSelection }: BulkActionsProps) => {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
+  
+  // Bulk interview scheduling state
+  const [bulkInterviewData, setBulkInterviewData] = useState({
+    position: '',
+    duration: '60',
+    description: '',
+    date: undefined as Date | undefined,
+    time: '14:00',
+    interviewType: 'technical'
+  });
+  
+  const { createInterview } = useInterviews();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const handleSendEmail = () => {
     setShowEmailDialog(true);
@@ -36,6 +65,93 @@ export const BulkActions = ({ selectedCount, onClearSelection }: BulkActionsProp
 
   const handleScheduleInterview = () => {
     setShowScheduleDialog(true);
+  };
+
+  const handleBulkSchedule = async () => {
+    if (!bulkInterviewData.date || !bulkInterviewData.time || !user) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsScheduling(true);
+    
+    try {
+      // Combine date and time into a proper datetime
+      const scheduledDateTime = new Date(bulkInterviewData.date);
+      const [hours, minutes] = bulkInterviewData.time.split(':').map(Number);
+      scheduledDateTime.setHours(hours, minutes, 0, 0);
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Create interviews for each selected candidate
+      for (const candidateId of selectedCandidateIds) {
+        const interviewData = {
+          candidate_id: candidateId,
+          recruiter_id: user.id,
+          job_position_id: null,
+          scheduled_at: scheduledDateTime.toISOString(),
+          duration: parseInt(bulkInterviewData.duration),
+          notes: bulkInterviewData.description,
+          status: 'scheduled' as const,
+          interview_type: bulkInterviewData.interviewType as 'technical' | 'behavioral' | 'cultural',
+          meeting_link: null,
+          feedback: null,
+          score: null
+        };
+
+        const result = await createInterview(interviewData);
+        
+        if (result.error) {
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast({
+          title: "Success",
+          description: `${successCount} interview(s) scheduled successfully!${errorCount > 0 ? ` ${errorCount} failed.` : ''}`,
+          variant: "default"
+        });
+      }
+
+      if (errorCount > 0 && successCount === 0) {
+        toast({
+          title: "Error",
+          description: "Failed to schedule interviews. Please try again.",
+          variant: "destructive"
+        });
+      }
+
+      if (successCount > 0) {
+        setShowScheduleDialog(false);
+        onClearSelection();
+        // Reset form
+        setBulkInterviewData({
+          position: '',
+          duration: '60',
+          description: '',
+          date: undefined,
+          time: '14:00',
+          interviewType: 'technical'
+        });
+      }
+    } catch (error) {
+      console.error('Error scheduling bulk interviews:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsScheduling(false);
+    }
   };
 
   const handleExportData = () => {
@@ -158,7 +274,7 @@ export const BulkActions = ({ selectedCount, onClearSelection }: BulkActionsProp
 
       {/* Schedule Interview Dialog */}
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-        <DialogContent className="bg-dark-secondary border-border-dark">
+        <DialogContent className="bg-dark-secondary border-border-dark max-w-md">
           <DialogHeader>
             <DialogTitle className="text-text-primary">Schedule Interviews for {selectedCount} Candidates</DialogTitle>
             <DialogDescription className="text-text-secondary">
@@ -166,16 +282,106 @@ export const BulkActions = ({ selectedCount, onClearSelection }: BulkActionsProp
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="text-text-primary">
-              Interview scheduling interface would be implemented here.
+            <div className="space-y-2">
+              <Label className="text-text-primary">Position/Role</Label>
+              <Input
+                value={bulkInterviewData.position}
+                onChange={(e) => setBulkInterviewData(prev => ({ ...prev, position: e.target.value }))}
+                placeholder="e.g., Senior Frontend Developer"
+                className="bg-dark-primary border-border-dark text-text-primary"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-text-primary">Duration (minutes)</Label>
+                <Select value={bulkInterviewData.duration} onValueChange={(value) => setBulkInterviewData(prev => ({ ...prev, duration: value }))}>
+                  <SelectTrigger className="bg-dark-primary border-border-dark text-text-primary">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="45">45 minutes</SelectItem>
+                    <SelectItem value="60">60 minutes</SelectItem>
+                    <SelectItem value="90">90 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-text-primary">Interview Type</Label>
+                <Select value={bulkInterviewData.interviewType} onValueChange={(value) => setBulkInterviewData(prev => ({ ...prev, interviewType: value }))}>
+                  <SelectTrigger className="bg-dark-primary border-border-dark text-text-primary">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="technical">Technical</SelectItem>
+                    <SelectItem value="behavioral">Behavioral</SelectItem>
+                    <SelectItem value="cultural">Cultural Fit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-text-primary">Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-dark-primary border-border-dark text-text-primary",
+                        !bulkInterviewData.date && "text-text-secondary"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {bulkInterviewData.date ? format(bulkInterviewData.date, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-dark-secondary border-border-dark">
+                    <CalendarComponent
+                      mode="single"
+                      selected={bulkInterviewData.date}
+                      onSelect={(date) => setBulkInterviewData(prev => ({ ...prev, date }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-text-primary">Time</Label>
+                <Input
+                  type="time"
+                  value={bulkInterviewData.time}
+                  onChange={(e) => setBulkInterviewData(prev => ({ ...prev, time: e.target.value }))}
+                  className="bg-dark-primary border-border-dark text-text-primary"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-text-primary">Notes (Optional)</Label>
+              <Textarea
+                value={bulkInterviewData.description}
+                onChange={(e) => setBulkInterviewData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Additional notes for the interview..."
+                className="bg-dark-primary border-border-dark text-text-primary"
+                rows={3}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowScheduleDialog(false)}>
+            <Button variant="outline" onClick={() => setShowScheduleDialog(false)} disabled={isScheduling}>
               Cancel
             </Button>
-            <Button className="bg-tech-green hover:bg-tech-green/90 text-dark-primary">
-              Schedule Interviews
+            <Button 
+              onClick={handleBulkSchedule}
+              disabled={isScheduling || !bulkInterviewData.date || !bulkInterviewData.time}
+              className="bg-tech-green hover:bg-tech-green/90 text-dark-primary disabled:opacity-50"
+            >
+              {isScheduling ? 'Scheduling...' : 'Schedule Interviews'}
             </Button>
           </DialogFooter>
         </DialogContent>

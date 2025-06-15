@@ -24,6 +24,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useProfile } from '@/hooks/useProfile';
+import { useInterviews } from '@/hooks/useInterviews';
+import { useActivities } from '@/hooks/useActivities';
+import { format } from 'date-fns';
 
 interface StatCard {
   title: string;
@@ -44,15 +47,18 @@ interface Interview {
 interface Activity {
   id: string;
   type: string;
+  title: string;
   description: string;
-  timestamp: string;
+  created_at: string;
+  metadata?: any;
 }
 
 const RecruiterDashboard = () => {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { profile } = useProfile();
+  const { interviews, loading } = useInterviews();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -126,76 +132,23 @@ const RecruiterDashboard = () => {
     }
   ];
 
-  const upcomingInterviews: Interview[] = [
-    {
-      id: '1',
-      candidate: 'Sarah Johnson',
-      position: 'Senior Frontend Developer',
-      time: 'Today, 2:00 PM',
-      status: 'scheduled'
-    },
-    {
-      id: '2',
-      candidate: 'Michael Chen',
-      position: 'Full Stack Engineer',
-      time: 'Today, 4:30 PM',
-      status: 'scheduled'
-    },
-    {
-      id: '3',
-      candidate: 'Emily Rodriguez',
-      position: 'Backend Developer',
-      time: 'Tomorrow, 10:00 AM',
-      status: 'scheduled'
-    },
-    {
-      id: '4',
-      candidate: 'David Kim',
-      position: 'DevOps Engineer',
-      time: 'Tomorrow, 2:00 PM',
-      status: 'scheduled'
-    },
-    {
-      id: '5',
-      candidate: 'Lisa Wang',
-      position: 'Data Scientist',
-      time: 'Friday, 11:00 AM',
-      status: 'scheduled'
-    }
-  ];
+  // Filter interviews for the current recruiter and upcoming ones
+  const upcomingInterviews = interviews.filter(interview => {
+    if (!user || interview.recruiter_id !== user.id) return false;
+    if (interview.status === 'cancelled' || interview.status === 'completed') return false;
+    if (!interview.scheduled_at) return false;
+    
+    const interviewDate = new Date(interview.scheduled_at);
+    const now = new Date();
+    return interviewDate > now;
+  }).sort((a, b) => {
+    const dateA = new Date(a.scheduled_at!);
+    const dateB = new Date(b.scheduled_at!);
+    return dateA.getTime() - dateB.getTime();
+  }).slice(0, 5); // Show only first 5 upcoming interviews
 
-  const recentActivities: Activity[] = [
-    {
-      id: '1',
-      type: 'interview',
-      description: 'Interview completed with Alex Turner for React Developer position',
-      timestamp: '2 hours ago'
-    },
-    {
-      id: '2',
-      type: 'candidate',
-      description: 'New candidate Maria Garcia applied for UX Designer role',
-      timestamp: '4 hours ago'
-    },
-    {
-      id: '3',
-      type: 'review',
-      description: 'Code review submitted for John Smith\'s technical assessment',
-      timestamp: '6 hours ago'
-    },
-    {
-      id: '4',
-      type: 'hire',
-      description: 'Offer accepted by Jennifer Lee for Senior Developer position',
-      timestamp: '1 day ago'
-    },
-    {
-      id: '5',
-      type: 'interview',
-      description: 'Interview scheduled with Robert Brown for Friday 3:00 PM',
-      timestamp: '1 day ago'
-    }
-  ];
+  const { activities, loading: activitiesLoading, formatActivityTime } = useActivities();
+  const recentActivities = activities.slice(0, 4);
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -406,20 +359,32 @@ const RecruiterDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivities.map((activity) => {
-                    const IconComponent = getActivityIcon(activity.type);
-                    return (
-                      <div key={activity.id} className="flex items-start space-x-3">
-                        <div className="w-8 h-8 bg-tech-green/20 rounded-full flex items-center justify-center flex-shrink-0">
-                          <IconComponent size={14} className="text-tech-green" />
+                  {activitiesLoading ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-tech-green mx-auto"></div>
+                      <p className="text-sm text-text-secondary mt-2">Loading activities...</p>
+                    </div>
+                  ) : recentActivities.length === 0 ? (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-text-secondary">No recent activities</p>
+                    </div>
+                  ) : (
+                    recentActivities.map((activity) => {
+                      const IconComponent = getActivityIcon(activity.type);
+                      return (
+                        <div key={activity.id} className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-tech-green/20 rounded-full flex items-center justify-center flex-shrink-0">
+                            <IconComponent size={14} className="text-tech-green" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-text-primary text-sm font-medium">{activity.title}</p>
+                            <p className="text-text-primary text-sm">{activity.description}</p>
+                            <p className="text-text-secondary text-xs mt-1">{formatActivityTime(activity.created_at)}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-text-primary text-sm">{activity.description}</p>
-                          <p className="text-text-secondary text-xs mt-1">{activity.timestamp}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -440,28 +405,48 @@ const RecruiterDashboard = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {upcomingInterviews.map((interview) => (
-                      <TableRow 
-                        key={interview.id} 
-                        className="border-border-dark cursor-pointer hover:bg-dark-primary/50"
-                        onClick={() => navigate(`/interview-room?id=${interview.id}`)}
-                      >
-                        <TableCell className="text-text-primary font-medium">
-                          {interview.candidate}
-                        </TableCell>
-                        <TableCell className="text-text-secondary">
-                          {interview.position}
-                        </TableCell>
-                        <TableCell className="text-text-secondary">
-                          {interview.time}
-                        </TableCell>
-                        <TableCell>
-                          <span className={`capitalize ${getStatusColor(interview.status)}`}>
-                            {interview.status}
-                          </span>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-text-secondary py-8">
+                          Loading interviews...
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : upcomingInterviews.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-text-secondary py-8">
+                          No upcoming interviews
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      upcomingInterviews.map((interview) => (
+                        <TableRow 
+                          key={interview.id} 
+                          className="border-border-dark cursor-pointer hover:bg-dark-primary/50"
+                          onClick={() => navigate(`/interview-room?id=${interview.id}`)}
+                        >
+                          <TableCell className="text-text-primary font-medium">
+                            {interview.candidate ? 
+                              `${interview.candidate.first_name} ${interview.candidate.last_name}` : 
+                              'Unknown Candidate'
+                            }
+                          </TableCell>
+                          <TableCell className="text-text-secondary">
+                            {interview.job_position?.title || 'No Position'}
+                          </TableCell>
+                          <TableCell className="text-text-secondary">
+                            {interview.scheduled_at ? 
+                              format(new Date(interview.scheduled_at), 'MMM dd, yyyy h:mm a') : 
+                              'No time set'
+                            }
+                          </TableCell>
+                          <TableCell>
+                            <span className={`capitalize ${getStatusColor(interview.status || 'scheduled')}`}>
+                              {interview.status || 'scheduled'}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

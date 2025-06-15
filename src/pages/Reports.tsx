@@ -15,6 +15,7 @@ import {
   Filter,
   Plus
 } from 'lucide-react';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import InterviewReports from '@/components/reports/InterviewReports';
 import AnalyticsDashboard from '@/components/reports/AnalyticsDashboard';
 import ReportBuilder from '@/components/reports/ReportBuilder';
@@ -22,35 +23,36 @@ import DataVisualization from '@/components/reports/DataVisualization';
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState('analytics');
+  const { analytics, loading } = useAnalytics();
 
   const reportStats = [
     {
-      title: "Total Reports Generated",
-      value: "1,247",
+      title: "Total Interviews",
+      value: analytics?.totalInterviews?.toString() || "0",
       change: "+18%",
       trend: "up",
-      icon: FileText
+      icon: Users
     },
     {
-      title: "Active Dashboards",
-      value: "23",
+      title: "Completion Rate",
+      value: analytics ? `${analytics.completionRate}%` : "0%",
       change: "+5%",
+      trend: "up",
+      icon: Target
+    },
+    {
+      title: "Average Score",
+      value: analytics ? `${analytics.averageScore}/10` : "0/10",
+      change: "+12%",
       trend: "up",
       icon: BarChart3
     },
     {
-      title: "Scheduled Reports",
-      value: "156",
-      change: "+12%",
-      trend: "up",
-      icon: Calendar
-    },
-    {
-      title: "Export Downloads",
-      value: "892",
+      title: "Time to Hire",
+      value: analytics ? `${analytics.timeToHire} days` : "0 days",
       change: "+23%",
       trend: "up",
-      icon: Download
+      icon: Calendar
     }
   ];
 

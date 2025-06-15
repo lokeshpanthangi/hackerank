@@ -5,14 +5,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Mail, Phone, Calendar } from "lucide-react";
 import { useCandidates } from "@/hooks/useCandidates";
 import PageLoader from "@/components/loading/PageLoader";
+import { BulkActions } from "@/components/candidates/BulkActions";
+import ScheduleInterviewModal from "@/components/ScheduleInterviewModal";
 import { format } from "date-fns";
 
 const Candidates = () => {
   const { candidates, loading } = useCandidates();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedCandidateForScheduling, setSelectedCandidateForScheduling] = useState<any>(null);
 
   if (loading) {
     return <PageLoader text="Loading candidates..." />;
@@ -32,6 +38,37 @@ const Candidates = () => {
     return `${first}${last}`.toUpperCase() || 'C';
   };
 
+  const handleSelectCandidate = (candidateId: string) => {
+    setSelectedCandidates(prev => 
+      prev.includes(candidateId) 
+        ? prev.filter(id => id !== candidateId)
+        : [...prev, candidateId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCandidates.length === filteredCandidates.length) {
+      setSelectedCandidates([]);
+    } else {
+      setSelectedCandidates(filteredCandidates.map(c => c.id));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedCandidates([]);
+  };
+
+  const handleScheduleIndividual = (candidate: any) => {
+    setSelectedCandidateForScheduling({
+      id: candidate.id,
+      name: `${candidate.first_name} ${candidate.last_name}`,
+      email: candidate.email,
+      position: 'Candidate',
+      avatar: candidate.avatar_url || ''
+    });
+    setShowScheduleModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-dark-primary">
       <div className="container mx-auto px-4 py-8">
@@ -42,17 +79,40 @@ const Candidates = () => {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-secondary" />
-            <Input
-              placeholder="Search candidates..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-dark-secondary border-border-dark text-text-primary"
-            />
+        {/* Search and Bulk Actions */}
+        <div className="mb-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-secondary" />
+              <Input
+                placeholder="Search candidates..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-dark-secondary border-border-dark text-text-primary"
+              />
+            </div>
+            
+            {filteredCandidates.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedCandidates.length === filteredCandidates.length && filteredCandidates.length > 0}
+                  onCheckedChange={handleSelectAll}
+                  className="border-border-dark data-[state=checked]:bg-tech-green data-[state=checked]:border-tech-green"
+                />
+                <span className="text-text-secondary text-sm">
+                  Select All ({filteredCandidates.length})
+                </span>
+              </div>
+            )}
           </div>
+          
+          {selectedCandidates.length > 0 && (
+            <BulkActions 
+              selectedCount={selectedCandidates.length}
+              selectedCandidateIds={selectedCandidates}
+              onClearSelection={handleClearSelection}
+            />
+          )}
         </div>
 
         {filteredCandidates.length === 0 ? (
@@ -73,9 +133,16 @@ const Candidates = () => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredCandidates.map((candidate) => (
-              <Card key={candidate.id} className="bg-dark-secondary border-border-dark hover:border-tech-green/50 transition-colors">
+              <Card key={candidate.id} className={`bg-dark-secondary border-border-dark hover:border-tech-green/50 transition-colors ${
+                selectedCandidates.includes(candidate.id) ? 'ring-2 ring-tech-green' : ''
+              }`}>
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-4">
+                    <Checkbox
+                      checked={selectedCandidates.includes(candidate.id)}
+                      onCheckedChange={() => handleSelectCandidate(candidate.id)}
+                      className="border-border-dark data-[state=checked]:bg-tech-green data-[state=checked]:border-tech-green"
+                    />
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={candidate.avatar_url || undefined} />
                       <AvatarFallback className="bg-tech-green text-dark-primary">
@@ -115,6 +182,7 @@ const Candidates = () => {
                   <div className="flex gap-2 pt-2">
                     <Button 
                       size="sm" 
+                      onClick={() => handleScheduleIndividual(candidate)}
                       className="bg-tech-green hover:bg-tech-green/90 text-dark-primary"
                     >
                       Schedule Interview
@@ -130,6 +198,38 @@ const Candidates = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+        
+        {/* Individual Schedule Interview Modal */}
+        {showScheduleModal && selectedCandidateForScheduling && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-dark-secondary rounded-lg border border-border-dark w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-text-primary">
+                    Schedule Interview - {selectedCandidateForScheduling.name}
+                  </h2>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      setShowScheduleModal(false);
+                      setSelectedCandidateForScheduling(null);
+                    }}
+                    className="text-text-secondary hover:text-text-primary"
+                  >
+                    ×
+                  </Button>
+                </div>
+                <ScheduleInterviewModal 
+                  onClose={() => {
+                    setShowScheduleModal(false);
+                    setSelectedCandidateForScheduling(null);
+                  }}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>

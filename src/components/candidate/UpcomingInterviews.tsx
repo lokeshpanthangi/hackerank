@@ -5,45 +5,33 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, Building, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useInterviews } from '@/hooks/useInterviews';
+import { useAuth } from '@/hooks/useAuth';
+import { format } from 'date-fns';
 
 const UpcomingInterviews = () => {
   const navigate = useNavigate();
+  const { interviews, loading } = useInterviews();
+  const { user } = useAuth();
   
-  const handleJoinInterview = (interviewId: number) => {
+  const handleJoinInterview = (interviewId: string) => {
     navigate(`/interview-room?id=${interviewId}`);
   };
-  const upcomingInterviews = [
-    {
-      id: 1,
-      company: 'TechCorp',
-      position: 'Senior Frontend Developer',
-      date: '2024-06-18',
-      time: '2:00 PM',
-      type: 'Technical',
-      status: 'confirmed',
-      logo: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=40&h=40&fit=crop&crop=center'
-    },
-    {
-      id: 2,
-      company: 'StartupXYZ',
-      position: 'Full Stack Engineer',
-      date: '2024-06-20',
-      time: '10:30 AM',
-      type: 'Culture Fit',
-      status: 'pending',
-      logo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=40&h=40&fit=crop&crop=center'
-    },
-    {
-      id: 3,
-      company: 'InnovateLabs',
-      position: 'React Developer',
-      date: '2024-06-22',
-      time: '4:00 PM',
-      type: 'Final Round',
-      status: 'confirmed',
-      logo: 'https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=40&h=40&fit=crop&crop=center'
-    }
-  ];
+
+  // Filter interviews for the current candidate and upcoming ones
+  const upcomingInterviews = interviews.filter(interview => {
+    if (!user || interview.candidate_id !== user.id) return false;
+    if (interview.status === 'cancelled' || interview.status === 'completed') return false;
+    if (!interview.scheduled_at) return false;
+    
+    const interviewDate = new Date(interview.scheduled_at);
+    const now = new Date();
+    return interviewDate > now;
+  }).sort((a, b) => {
+    const dateA = new Date(a.scheduled_at!);
+    const dateB = new Date(b.scheduled_at!);
+    return dateA.getTime() - dateB.getTime();
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -71,57 +59,79 @@ const UpcomingInterviews = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {upcomingInterviews.map((interview) => (
-            <div key={interview.id} className="p-4 rounded-lg bg-dark-primary border border-border-dark">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <img 
-                    src={interview.logo} 
-                    alt={interview.company}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-text-primary">{interview.position}</h3>
-                    <div className="flex items-center gap-2 text-text-secondary text-sm mt-1">
-                      <Building className="h-3 w-3" />
-                      <span>{interview.company}</span>
+        {loading ? (
+          <div className="text-center py-4 text-text-secondary">Loading interviews...</div>
+        ) : upcomingInterviews.length === 0 ? (
+          <div className="text-center py-4 text-text-secondary">No upcoming interviews scheduled</div>
+        ) : (
+          <div className="space-y-4">
+            {upcomingInterviews.map((interview) => {
+              const interviewDate = new Date(interview.scheduled_at!);
+              const recruiterName = interview.recruiter ? 
+                `${interview.recruiter.first_name || ''} ${interview.recruiter.last_name || ''}`.trim() : 
+                'Unknown Recruiter';
+              const companyName = interview.job_position?.company?.name || 'Company';
+              const positionTitle = interview.job_position?.title || interview.title;
+              
+              return (
+                <div key={interview.id} className="p-4 rounded-lg bg-dark-primary border border-border-dark">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-tech-green/20 rounded-full flex items-center justify-center">
+                        <Building className="h-5 w-5 text-tech-green" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-text-primary">{positionTitle}</h3>
+                        <div className="flex items-center gap-2 text-text-secondary text-sm mt-1">
+                          <Building className="h-3 w-3" />
+                          <span>{companyName}</span>
+                        </div>
+                        <div className="text-text-secondary text-xs mt-1">
+                          Interviewer: {recruiterName}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Badge className={getStatusColor(interview.status)}>
+                        {interview.status}
+                      </Badge>
+                      <Badge className="bg-blue-500 text-white">
+                        Interview
+                      </Badge>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Badge className={getStatusColor(interview.status)}>
-                    {interview.status}
-                  </Badge>
-                  <Badge className={`${getTypeColor(interview.type)} text-white`}>
-                    {interview.type}
-                  </Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center gap-4 text-sm text-text-secondary">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>{interview.date}</span>
+                  
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-4 text-sm text-text-secondary">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>{format(interviewDate, 'MMM dd, yyyy')}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{format(interviewDate, 'h:mm a')}</span>
+                      </div>
+                      {interview.duration_minutes && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{interview.duration_minutes} min</span>
+                        </div>
+                      )}
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="bg-tech-green hover:bg-tech-green/90 text-dark-primary"
+                      onClick={() => handleJoinInterview(interview.id)}
+                    >
+                      <Video className="h-3 w-3 mr-1" />
+                      Join
+                    </Button>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    <span>{interview.time}</span>
-                  </div>
                 </div>
-                <Button 
-                  size="sm" 
-                  className="bg-tech-green hover:bg-tech-green/90 text-dark-primary"
-                  onClick={() => handleJoinInterview(interview.id)}
-                >
-                  <Video className="h-3 w-3 mr-1" />
-                  Join
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

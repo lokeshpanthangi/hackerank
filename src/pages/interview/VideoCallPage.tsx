@@ -6,15 +6,17 @@ import { useInterview } from '@/contexts/InterviewContext';
 import { VideoRoom } from '@/components/interview/VideoRoom';
 import { SimpleSpeechRecorder } from '@/components/interview/SimpleSpeechRecorder';
 import { TranscriptView } from '@/components/interview/TranscriptView';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 
 const VideoCallPage: React.FC = () => {
   // State for elapsed time
   const [elapsedTime, setElapsedTime] = useState(0);
   const [activeTab, setActiveTab] = useState('video');
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const { profile } = useProfile();
   
   // Access the interview context
   const { isRecording, transcriptLines } = useInterview();
@@ -41,16 +43,13 @@ const VideoCallPage: React.FC = () => {
   
   // Get room ID from URL parameters or generate a default one
   const roomIdFromUrl = searchParams.get('room');
-  const roleFromUrl = searchParams.get('role')?.toLowerCase();
   
   // Generate a unique room name based on the URL parameter or a default
   const roomName = roomIdFromUrl || "interview-room-123";
   
-  // Set user role based on URL parameter or default to Interviewer
-  const [userRole, setUserRole] = useState<"Interviewer" | "Candidate">(
-    roleFromUrl === 'candidate' ? "Candidate" : "Interviewer"
-  );
-  const identity = userRole;
+  // Use the user's actual role from their profile
+  const userRole = profile?.role === 'candidate' ? 'Candidate' : 'Interviewer';
+  const identity = user?.email || `${userRole}-${Date.now()}`;
   
   // Format time to MM:SS
   const formatTime = (seconds: number) => {
@@ -68,13 +67,7 @@ const VideoCallPage: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Toggle role function
-  const toggleRole = () => {
-    if (isRecording) {
-      return; // Don't allow changing roles while recording
-    }
-    setUserRole(prev => prev === "Interviewer" ? "Candidate" : "Interviewer");
-  };
+
 
   return (
     <div className="p-6 h-full">
@@ -82,20 +75,12 @@ const VideoCallPage: React.FC = () => {
         <h1 className="text-2xl font-semibold text-white">Video Call</h1>
         
         <div className="flex items-center space-x-4">
-          {/* Role Switcher (for testing) */}
+          {/* User Role Display */}
           <div className="flex items-center space-x-2 bg-dark-secondary px-3 py-1 rounded">
             <UserCog className="w-4 h-4 text-tech-green" />
-            <div className="flex items-center gap-2">
-              <Label htmlFor="role-switch" className="text-xs text-white">
-                {userRole === "Interviewer" ? "Interviewer" : "Candidate"}
-              </Label>
-              <Switch
-                id="role-switch"
-                checked={userRole === "Candidate"}
-                onCheckedChange={toggleRole}
-                disabled={isRecording}
-              />
-            </div>
+            <span className="text-xs text-white">
+              {userRole}
+            </span>
           </div>
           
           {/* Room ID Display */}
