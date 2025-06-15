@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const { AccessToken } = require('twilio').jwt;
 const VideoGrant = AccessToken.VideoGrant;
 const axios = require('axios');
-const { createClient } = require('@deepgram/sdk');
+// const { createClient } = require('@deepgram/sdk'); // Removed - no longer using Deepgram
 const { v4: uuidv4 } = require('uuid');
 const WebSocket = require('ws');
 const http = require('http');
@@ -30,20 +30,16 @@ const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const twilioApiKeySid = process.env.TWILIO_API_KEY_SID;
 const twilioApiKeySecret = process.env.TWILIO_API_KEY_SECRET;
 
-// Deepgram API key from environment variables
-const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
-
-// Initialize Deepgram client with the new SDK approach
-const deepgram = createClient(deepgramApiKey);
+// Deepgram variables removed - now using browser-based speech recognition
+// const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
+// const deepgram = createClient(deepgramApiKey);
+// const deepgramSockets = {};
 
 // AssemblyAI credentials from environment variables
 const assemblyApiKey = process.env.ASSEMBLY_API_KEY;
 
 // In-memory store for transcripts (use a database in production)
 const transcripts = {};
-
-// In-memory store for Deepgram socket connections
-const deepgramSockets = {};
 
 // Endpoint to generate Twilio access token
 app.post('/api/twilio/token', (req, res) => {
@@ -166,69 +162,17 @@ app.get('/api/assembly/transcript/:transcriptId', async (req, res) => {
   }
 });
 
-// Endpoint to get Deepgram token for client-side use
-app.get('/api/deepgram/token', async (req, res) => {
-  console.log('Deepgram token endpoint called');
-  try {
-    if (!deepgramApiKey) {
-      console.error('Deepgram API key is not configured');
-      return res.status(500).json({ 
-        error: 'Deepgram API key is not configured',
-        message: 'Please configure the Deepgram API key in the server' 
-      });
-    }
-    
-    // Validate that the key is properly formed (basic validation)
-    if (typeof deepgramApiKey !== 'string' || deepgramApiKey.length < 10) {
-      console.error('Deepgram API key appears to be invalid');
-      return res.status(500).json({ 
-        error: 'Invalid Deepgram API key',
-        message: 'The Deepgram API key appears to be invalid' 
-      });
-    }
-    
-    // For simplicity, just return the API key directly
-    // In a production environment, you should implement proper key management
-    console.log(`Returning Deepgram token: ${deepgramApiKey.substring(0, 10)}...`);
-    res.json({ token: deepgramApiKey });
-  } catch (error) {
-    console.error('Error generating Deepgram token:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate Deepgram token',
-      message: error.message 
-    });
-  }
-});
+// Deepgram endpoint removed - now using browser-based speech recognition
+// app.get('/api/deepgram/token', async (req, res) => {
+//   // This endpoint is no longer needed since we're using Web Speech API
+//   res.status(404).json({ error: 'Deepgram integration has been replaced with browser-based speech recognition' });
+// });
 
-// New endpoint to handle Deepgram real-time transcription
-app.post('/api/deepgram/stream', (req, res) => {
-  const { roomId, identity } = req.body;
-  
-  if (!roomId || !identity) {
-    return res.status(400).json({ error: 'Room ID and identity are required' });
-  }
-  
-  try {
-    console.log(`Setting up real-time transcription for ${identity} in room ${roomId}`);
-    
-    // Generate a unique session ID for this transcription session
-    const sessionId = uuidv4();
-    
-    // Create a response with the session ID
-    res.json({ 
-      sessionId,
-      status: 'ready',
-      message: 'Transcription session is ready to receive audio'
-    });
-    
-  } catch (error) {
-    console.error('Error setting up transcription:', error);
-    res.status(500).json({ 
-      error: 'Failed to set up transcription',
-      message: error.message 
-    });
-  }
-});
+// Deepgram stream endpoint removed - now using browser-based speech recognition
+// app.post('/api/deepgram/stream', (req, res) => {
+//   // This endpoint is no longer needed since we're using Web Speech API
+//   res.status(404).json({ error: 'Deepgram integration has been replaced with browser-based speech recognition' });
+// });
 
 // Endpoint to get all transcripts for a room
 app.get('/api/transcripts/:roomId', (req, res) => {
@@ -463,190 +407,12 @@ wss.on('connection', (ws, req) => {
   }
 });
 
-// Create a new WebSocket server for Deepgram audio streaming
-const deepgramWss = new WebSocket.Server({ noServer: true });
+// Deepgram WebSocket server removed - now using browser-based speech recognition
+// const deepgramWss = new WebSocket.Server({ noServer: true });
+// Deepgram WebSocket handling is no longer needed since we're using Web Speech API
 
-// Handle Deepgram WebSocket connections
-deepgramWss.on('connection', (ws, req) => {
-  try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const roomId = url.searchParams.get('room');
-    const identity = url.searchParams.get('identity');
-    const sessionId = url.searchParams.get('session');
-    
-    console.log(`New Deepgram WebSocket connection established:
-      - Room ID: ${roomId}
-      - Identity: ${identity}
-      - Session ID: ${sessionId}
-    `);
-    
-    if (!roomId || !identity) {
-      console.log('Missing required parameters, closing connection');
-      ws.close(1000, 'Missing required parameters');
-      return;
-    }
-    
-    // Setup Deepgram transcription for this connection
-    setupRealtimeTranscription(ws, roomId, identity);
-    
-    // Handle client disconnection
-    ws.on('close', (code, reason) => {
-      console.log(`Deepgram client ${identity} disconnected from room ${roomId}. Code: ${code}, Reason: ${reason || 'No reason provided'}`);
-      
-      // Clean up Deepgram socket if it exists
-      if (deepgramSockets[sessionId]) {
-        try {
-          if (deepgramSockets[sessionId].getReadyState() === WebSocket.OPEN) {
-            deepgramSockets[sessionId].finish();
-          }
-        } catch (error) {
-          console.error(`Error closing Deepgram socket for session ${sessionId}:`, error);
-        }
-        delete deepgramSockets[sessionId];
-      }
-    });
-    
-  } catch (error) {
-    console.error('Error in Deepgram WebSocket connection handler:', error);
-    console.error(error.stack);
-    ws.close(1011, 'Internal Server Error');
-  }
-});
-
-// Function to set up real-time transcription with Deepgram
-function setupRealtimeTranscription(ws, roomId, identity) {
-  try {
-    console.log(`Setting up real-time transcription for ${identity} in room ${roomId}`);
-    
-    // Create a unique session ID for this connection
-    const sessionId = uuidv4();
-    
-    // Create a Deepgram WebSocket connection
-    const dgSocket = deepgram.transcription.live({
-      punctuate: true,
-      smart_format: true,
-      model: 'nova-2',
-      language: 'en',
-      encoding: 'linear16',
-      sample_rate: 16000,
-      channels: 1,
-      interim_results: true
-    });
-    
-    // Store the Deepgram socket for later cleanup
-    deepgramSockets[sessionId] = dgSocket;
-    
-    // When the Deepgram socket is open, notify the client
-    dgSocket.addListener('open', () => {
-      console.log(`Deepgram connection open for ${identity}`);
-      ws.send(JSON.stringify({ 
-        type: 'ready',
-        message: 'Deepgram connection is ready to receive audio'
-      }));
-    });
-    
-    // Forward audio data from client to Deepgram
-    ws.on('message', (message) => {
-      try {
-        // Check if the message is binary (audio data)
-        if (message instanceof Buffer) {
-          // Send the audio data to Deepgram if the connection is open
-          if (dgSocket.getReadyState() === WebSocket.OPEN) {
-            dgSocket.send(message);
-          }
-        } else {
-          // Handle text messages (like control commands)
-          const data = JSON.parse(message.toString());
-          
-          if (data.type === 'close') {
-            console.log(`Received close request from ${identity}`);
-            if (dgSocket.getReadyState() === WebSocket.OPEN) {
-              dgSocket.finish();
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`Error processing audio message from ${identity}:`, error);
-      }
-    });
-    
-    // Handle transcription results from Deepgram
-    dgSocket.addListener('transcriptReceived', (transcription) => {
-      try {
-        const transcriptionData = JSON.parse(transcription);
-        
-        // Check if we have valid transcript data
-        if (transcriptionData.channel && 
-            transcriptionData.channel.alternatives && 
-            transcriptionData.channel.alternatives.length > 0) {
-          
-          const transcript = transcriptionData.channel.alternatives[0].transcript;
-          
-          // Only process non-empty transcripts
-          if (transcript && transcript.trim()) {
-            // Only process final transcripts to avoid cluttering with interim results
-            if (transcriptionData.is_final) {
-              console.log(`Transcript from ${identity}: "${transcript.substring(0, 50)}..."`);
-              
-              // Create a transcript line
-              const transcriptLine = {
-                id: uuidv4(),
-                speaker: identity,
-                text: transcript,
-                timestamp: new Date().toISOString()
-              };
-              
-              // Add to the room's transcript history
-              if (!transcripts[roomId]) {
-                transcripts[roomId] = [];
-              }
-              transcripts[roomId].push(transcriptLine);
-              
-              // Send the transcript back to the client
-              ws.send(JSON.stringify({
-                type: 'transcript',
-                line: transcriptLine
-              }));
-              
-              // Broadcast to all clients in this room
-              broadcastToRoom(roomId, {
-                type: 'transcript',
-                line: transcriptLine
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`Error processing Deepgram transcription for ${identity}:`, error);
-      }
-    });
-    
-    // Handle Deepgram connection close
-    dgSocket.addListener('close', () => {
-      console.log(`Deepgram connection closed for ${identity}`);
-      ws.send(JSON.stringify({
-        type: 'closed',
-        message: 'Deepgram connection closed'
-      }));
-    });
-    
-    // Handle Deepgram errors
-    dgSocket.addListener('error', (error) => {
-      console.error(`Deepgram error for ${identity}:`, error);
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: 'Deepgram encountered an error'
-      }));
-    });
-    
-  } catch (error) {
-    console.error(`Error setting up real-time transcription for ${identity}:`, error);
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Failed to set up transcription'
-    }));
-  }
-}
+// setupRealtimeTranscription function removed - now using browser-based speech recognition
+// This function is no longer needed since we're using Web Speech API in the browser
 
 // Broadcast message to all clients in a room
 function broadcastToRoom(roomId, message) {
@@ -718,14 +484,10 @@ server.on('upgrade', (request, socket, head) => {
         wss.emit('connection', ws, request);
       });
     } 
-    // Handle WebSocket connections for Deepgram audio streaming
-    else if (pathname === '/deepgram') {
-      console.log(`Processing WebSocket upgrade for /deepgram with room=${roomId}`);
-      deepgramWss.handleUpgrade(request, socket, head, (ws) => {
-        console.log('Deepgram WebSocket connection successfully upgraded');
-        deepgramWss.emit('connection', ws, request);
-      });
-    }
+    // Deepgram WebSocket routing removed - now using browser-based speech recognition
+    // else if (pathname === '/deepgram') {
+    //   // This path is no longer needed since we're using Web Speech API
+    // }
     else {
       console.log(`Unhandled WebSocket path: ${pathname}, closing connection`);
       // Close the connection if the path is not recognized
@@ -741,4 +503,4 @@ server.on('upgrade', (request, socket, head) => {
 // Start the server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});

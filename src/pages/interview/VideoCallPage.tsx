@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Circle, Timer, Users, Video, FileText, UserCog } from 'lucide-react';
 import { useInterview } from '@/contexts/InterviewContext';
 import { VideoRoom } from '@/components/interview/VideoRoom';
-import { DeepgramAudioRecorder } from '@/components/interview/DeepgramAudioRecorder';
+import { SimpleSpeechRecorder } from '@/components/interview/SimpleSpeechRecorder';
 import { TranscriptView } from '@/components/interview/TranscriptView';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -159,13 +159,13 @@ const VideoCallPage: React.FC = () => {
                   <h3 className="text-lg font-medium text-white mb-3">
                     You are speaking as: <span className="text-tech-green">{userRole}</span>
                   </h3>
-                  <DeepgramAudioRecorder 
+                  <SimpleSpeechRecorder 
                     speakerName={userRole}
                     speakerRole={userRole === "Interviewer" ? "Interviewer" : "Candidate"}
                     roomId={roomName}
                   />
                   <p className="mt-4 text-text-secondary text-sm">
-                    Note: Speech recognition requires an active internet connection. Both participants' transcripts will be shared in real-time.
+                    Note: Speech recognition uses your browser's built-in capabilities. Works best with Chrome, Edge, or Safari. Requires internet connection.
                   </p>
                 </div>
               </div>
@@ -180,4 +180,4 @@ const VideoCallPage: React.FC = () => {
   );
 };
 
-export default VideoCallPage; 
+export default VideoCallPage;

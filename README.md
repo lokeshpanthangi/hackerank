@@ -1,351 +1,304 @@
-# Welcome to your Lovable project
+<div align="center">
 
-## Project info
+# 🚀 CodeInterview Pro
 
-**URL**: https://lovable.dev/projects/2a3253da-a36a-4ae9-a22d-3b6bf299d2f7
+### AI-Powered Technical Interview Platform
 
-## How can I edit this code?
+*Streamline your technical recruitment with real-time code collaboration, AI-powered candidate analysis, and seamless video interviews.*
 
-There are several ways of editing your application.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5+-purple.svg)](https://vitejs.dev/)
 
-**Use Lovable**
+[🌟 Features](#-features) • [🚀 Quick Start](#-quick-start) • [📖 Documentation](#-documentation) • [🤝 Contributing](#-contributing)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/2a3253da-a36a-4ae9-a22d-3b6bf299d2f7) and start prompting.
+</div>
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## ✨ Overview
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+CodeInterview Pro is a comprehensive technical interview platform that revolutionizes the hiring process for engineering teams. Built with modern web technologies, it provides a seamless experience for conducting, evaluating, and managing technical interviews.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 🎯 Key Highlights
 
-Follow these steps:
+- **10,000+** interviews conducted
+- **500+** companies trust our platform
+- **95%** accuracy rate in candidate evaluation
+- **Real-time** collaboration and analysis
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🌟 Features
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 💻 **Real-time Code Collaboration**
+- Live syntax highlighting and code editing
+- Shared debugging capabilities
+- Multiple programming language support
+- Instant feedback and suggestions
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 🧠 **AI-Powered Analysis**
+- Advanced code quality evaluation
+- Algorithmic thinking assessment
+- Problem-solving approach analysis
+- Detailed performance insights
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### 🎥 **HD Video Interviews**
+- Seamless video integration
+- Screen sharing capabilities
+- Automated session recording
+- Real-time speech-to-text transcription
 
-**Edit a file directly in GitHub**
+### 👥 **Team Collaboration**
+- Multiple interviewer support
+- Shared notes and evaluations
+- Real-time collaboration tools
+- Team productivity insights
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### ⏱️ **Smart Time Management**
+- Built-in interview timers
+- Progress tracking
+- Automated session management
+- Structured interview flow
 
-**Use GitHub Codespaces**
+### 📊 **Analytics & Reports**
+- Comprehensive candidate reports
+- Interview performance metrics
+- Team productivity analytics
+- Exportable evaluation summaries
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/2a3253da-a36a-4ae9-a22d-3b6bf299d2f7) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
-
-# Hacerank - Technical Interview Platform
-
-A comprehensive platform for conducting technical interviews with code editing, video calls, and AI-powered analysis.
-
-## Features
-
-- **Code Editor**: Monaco-based editor with syntax highlighting and multiple language support
-- **Video Calls**: Real-time video conferencing with Twilio Video
-- **Transcription**: Interview transcription using AssemblyAI
-- **AI Analysis**: Multi-agent AI system for code quality and communication analysis
-- **Candidate Summary Reports**: Comprehensive evaluation of candidate performance
-
-## Setup Instructions
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js (v16+)
-- npm or yarn
-- Twilio account with API credentials
-- AssemblyAI account with API key
-- OpenAI API key (for AI analysis features)
-
-### Environment Setup
-
-1. Clone the repository
-2. Create two `.env` files:
-
-   a. In the root directory (for frontend):
-   ```sh
-   # Client Configuration
-   VITE_API_BASE_URL=http://localhost:5000
-   VITE_WS_BASE_URL=ws://localhost:5000
-   VITE_OPENAI_API_KEY=your_openai_api_key
-   ```
-
-   b. In the server directory (for backend):
-   ```sh
-   # Server Configuration
-   PORT=5000
-   NODE_ENV=development
-
-   # Twilio Credentials
-   TWILIO_ACCOUNT_SID=your_account_sid
-   TWILIO_API_KEY_SID=your_api_key_sid
-   TWILIO_API_KEY_SECRET=your_api_key_secret
-
-   # Deepgram Credentials
-   DEEPGRAM_API_KEY=your_deepgram_api_key
-
-   # AssemblyAI Credentials
-   ASSEMBLY_API_KEY=your_assembly_ai_key
-   ```
-
-> **IMPORTANT**: Never commit these `.env` files to version control. They are already added to `.gitignore` to prevent accidental exposure of sensitive credentials.
+Ensure you have the following installed:
+- **Node.js** (v18 or higher) - [Install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **npm** (comes with Node.js)
 
 ### Installation
 
-1. Install server dependencies:
-```
-cd server
-npm install
-```
+1. **Clone the repository**
+   ```bash
+   git clone <YOUR_GIT_URL>
+   cd <YOUR_PROJECT_NAME>
+   ```
 
-2. Install client dependencies:
-```
-npm install
-```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-3. Start the development server:
-```
-npm run dev:all
-```
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-This will start both the frontend (Vite) and backend (Express) servers.
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-## Architecture
+5. **Start the backend server** (in a new terminal)
+   ```bash
+   npm run server
+   ```
+
+6. **Open your browser**
+   Navigate to `http://localhost:8080` to see the application running.
+
+### 🔧 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start the development server |
+| `npm run build` | Build for production |
+| `npm run server` | Start the backend server |
+| `npm run dev:all` | Start both frontend and backend |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Preview production build |
+
+## 🏗️ Tech Stack
 
 ### Frontend
+- **React 18** - Modern UI library
+- **TypeScript** - Type-safe development
+- **Vite** - Lightning-fast build tool
+- **Tailwind CSS** - Utility-first styling
+- **Radix UI** - Accessible component primitives
+- **Monaco Editor** - VS Code-powered code editor
 
-- **React**: UI framework
-- **TypeScript**: Type safety
-- **Tailwind CSS**: Styling
-- **Shadcn/UI**: Component library
-- **Monaco Editor**: Code editing
-- **React Router**: Navigation
-- **Twilio Video**: Video conferencing
-- **Context API**: State management
+### Backend & Services
+- **Node.js** - Server runtime
+- **Supabase** - Backend-as-a-Service
+- **Deepgram** - Speech recognition API
+- **OpenAI** - AI-powered analysis
+- **WebRTC** - Real-time communication
 
-### Backend
+### Key Libraries
+- **@tanstack/react-query** - Data fetching and caching
+- **React Router** - Client-side routing
+- **Axios** - HTTP client
+- **Lucide React** - Beautiful icons
+- **React Hook Form** - Form management
 
-- **Express**: API server
-- **Twilio SDK**: Token generation and room management
-- **AssemblyAI**: Transcription services
-- **OpenAI SDK**: AI analysis
+## 📁 Project Structure
 
-### AI Analysis System
-
-The platform uses a multi-agent AI system for comprehensive candidate evaluation:
-
-1. **Code Quality Agents**:
-   - Correctness Analysis
-   - Complexity Analysis
-   - Edge Case Handling
-   - Performance Analysis
-   - Security Analysis
-   - Style Analysis
-
-2. **Communication Analysis Agent**:
-   - Evaluates clarity, technical accuracy, collaboration style, and more
-   - Uses interview transcript and chat messages
-
-3. **Candidate Report Summarizer**:
-   - Combines insights from code and communication analysis
-   - Provides overall assessment, strengths, weaknesses, and hiring recommendation
-
-## License
-
-MIT
-
-## Code Quality Analysis Feature
-
-This feature uses specialized AI agents to analyze code from different perspectives:
-
-1. **Correctness**: Identifies logical errors and functional correctness issues
-2. **Complexity**: Evaluates code complexity and maintainability
-3. **Edge Cases**: Finds potential edge cases and boundary conditions
-4. **Performance**: Analyzes algorithmic efficiency and optimization opportunities
-5. **Security**: Detects security vulnerabilities and risks
-6. **Style & Readability**: Assesses code clarity and adherence to best practices
-
-A summarizer agent then provides an overall assessment with hiring recommendations.
-
-## Setup
-
-1. Clone the repository
-2. Create a `.env` file in the root directory with your OpenAI API key:
-   ```
-   VITE_OPENAI_API_KEY=your-openai-api-key
-   ```
-3. Install dependencies:
-   ```
-   npm install
-   ```
-4. Start the development server:
-   ```
-   npm run dev
-   ```
-
-## Using the Code Quality Analysis
-
-1. Navigate to the Interview Room
-2. Enter code in the Code Editor Panel
-3. In the AI Analysis Panel, provide a problem statement and select the role level
-4. Click "Analyze Code" to start the analysis
-5. View results in the different tabs for each analysis perspective
-6. The Summary tab provides an overall assessment with hiring recommendations
-
-## Development Mode
-
-In development mode, the system uses mock responses to avoid API costs. To use real OpenAI API calls, set:
-
-```typescript
-const useMock = false;
+```
+collab/
+├── 📁 public/                 # Static assets
+├── 📁 server/                 # Backend server
+│   ├── index.js              # Main server file
+│   └── deepgram-server.js     # Speech recognition service
+├── 📁 src/
+│   ├── 📁 components/         # Reusable UI components
+│   │   ├── 📁 interview/      # Interview-specific components
+│   │   ├── 📁 ui/            # Base UI components
+│   │   └── 📁 scheduling/     # Scheduling components
+│   ├── 📁 contexts/          # React contexts
+│   ├── 📁 hooks/             # Custom React hooks
+│   ├── 📁 pages/             # Page components
+│   ├── 📁 integrations/      # External service integrations
+│   └── 📁 types/             # TypeScript type definitions
+├── 📄 package.json           # Dependencies and scripts
+├── 📄 tailwind.config.ts     # Tailwind configuration
+├── 📄 vite.config.ts         # Vite configuration
+└── 📄 README.md              # This file
 ```
 
-in the `runAnalysis` function in `CodeQualityAnalysis.tsx`.
+## 🎮 Usage
 
-## Architecture
+### For Recruiters
+1. **Sign up** and create your recruiter account
+2. **Schedule interviews** using the intuitive calendar interface
+3. **Conduct interviews** with real-time code collaboration
+4. **Review AI analysis** and candidate performance metrics
+5. **Generate reports** for stakeholder review
 
-- `src/integrations/openai/codeQualityAnalysis.ts`: Core agent-based analysis service
-- `src/components/interview/CodeQualityAnalysis.tsx`: UI component for displaying analysis results
-- `src/components/interview/ProblemStatementInput.tsx`: UI for entering problem statements
-- `src/components/interview/AIAnalysisPanel.tsx`: Container component that integrates everything
-- `src/components/interview/CodeEditorPanel.tsx`: Code editor that sends code to the analysis panel
+### For Candidates
+1. **Join interviews** using the provided link
+2. **Collaborate in real-time** on coding challenges
+3. **Communicate effectively** with video and chat features
+4. **Showcase your skills** with live coding demonstrations
 
-## Agent Prompts
+### For Administrators
+1. **Manage users** and permissions
+2. **Monitor platform** usage and performance
+3. **Configure settings** and integrations
+4. **Access analytics** and reporting dashboards
 
-Each agent has a specialized prompt that focuses on a specific aspect of code quality. The prompts are designed to return structured JSON responses that can be easily displayed in the UI.
+## 🔧 Configuration
 
-# Hacerank Interview Platform
+### Environment Variables
 
-A technical interview platform with real-time video calling and transcription features.
+Create a `.env` file in the root directory:
 
-## Features
+```env
+# Supabase Configuration
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-- Real-time video calling using Twilio Video
-- Live speech-to-text transcription using Deepgram
-- Multi-device support for interviewers and candidates
-- Shared transcription between participants
-- Code editor with syntax highlighting
-- Interview notes and evaluation
+# OpenAI Configuration
+VITE_OPENAI_API_KEY=your_openai_api_key
 
-## Setup Instructions
+# Deepgram Configuration (for speech recognition)
+ASSEMBLY_API_KEY=your_deepgram_api_key
 
-### Prerequisites
+# Application Settings
+VITE_APP_URL=http://localhost:8080
+```
 
-- Node.js 14+ and npm
-- A Deepgram account with API key
-- Twilio account with Video API credentials
+### Database Setup
 
-### Server Setup
+The application uses Supabase for data management. Run the included migrations:
 
-1. Navigate to the server directory:
-   ```
-   cd server
-   ```
+```bash
+# If using Supabase CLI
+supabase db reset
+```
 
-2. Install dependencies:
-   ```
-   npm install
-   ```
+## 🚀 Deployment
 
-3. Create a `.env` file in the server directory with the following:
-   ```
-   PORT=5000
-   TWILIO_ACCOUNT_SID=your_twilio_account_sid
-   TWILIO_API_KEY_SID=your_twilio_api_key_sid
-   TWILIO_API_KEY_SECRET=your_twilio_api_key_secret
-   DEEPGRAM_API_KEY=your_deepgram_api_key
-   ```
+### Production Build
 
-4. Start the server:
-   ```
-   npm start
-   ```
+```bash
+# Build the application
+npm run build
 
-### Client Setup
+# Preview the build
+npm run preview
+```
 
-1. Navigate to the client directory:
-   ```
-   cd ..
-   ```
+### Deployment Options
 
-2. Install dependencies:
-   ```
-   npm install
-   ```
+- **Vercel** - Recommended for frontend
+- **Netlify** - Alternative frontend hosting
+- **Railway** - Full-stack deployment
+- **Docker** - Containerized deployment
 
-3. Create a `.env` file in the root directory with:
-   ```
-   VITE_API_BASE_URL=http://localhost:5000
-   ```
+## 🤝 Contributing
 
-4. Start the client:
-   ```
-   npm run dev
-   ```
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
-## Using the Multi-Device Interview Feature
+### Development Workflow
 
-### For Interviewers
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
 
-1. Start an interview session by navigating to:
-   ```
-   http://localhost:5173/interview/video?room=YOUR_ROOM_ID&role=interviewer
-   ```
+### Code Style
 
-2. Share the candidate link with your interviewee:
-   ```
-   http://localhost:5173/interview/video?room=YOUR_ROOM_ID&role=candidate
-   ```
+- Use **TypeScript** for type safety
+- Follow **ESLint** configuration
+- Use **Prettier** for code formatting
+- Write **meaningful commit messages**
 
-3. Both participants will join the same video room and can see/hear each other.
+## 📖 Documentation
 
-4. Click the "Start Recording" button to begin transcribing your speech.
+- [API Documentation](docs/api.md)
+- [Component Library](docs/components.md)
+- [Deployment Guide](docs/deployment.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
-5. Both participants' transcriptions will be shared in real-time.
+## 🐛 Troubleshooting
 
-## Troubleshooting
+### Common Issues
 
-- **Video not showing**: Ensure camera permissions are granted in your browser
-- **Transcription not working**: Check your internet connection and verify your Deepgram API key
-- **Connection issues**: Make sure both server and client are running and on the same network
+**Speech Recognition Not Working**
+- Ensure microphone permissions are granted
+- Check internet connection stability
+- Verify browser compatibility (Chrome recommended)
 
-## License
+**Video Call Issues**
+- Check camera/microphone permissions
+- Ensure stable internet connection
+- Try refreshing the page
 
-MIT
+**Build Errors**
+- Clear node_modules: `rm -rf node_modules && npm install`
+- Check Node.js version compatibility
+- Verify environment variables
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Lovable** - Platform development support
+- **Supabase** - Backend infrastructure
+- **Deepgram** - Speech recognition technology
+- **OpenAI** - AI analysis capabilities
+- **Radix UI** - Accessible component library
+
+---
+
+<div align="center">
+
+**Built with ❤️ by the CodeInterview Pro Team**
+
+[Website](https://lovable.dev/projects/2a3253da-a36a-4ae9-a22d-3b6bf299d2f7) • [Documentation](docs/) • [Support](mailto:support@codeinterview.pro)
+
+</div>

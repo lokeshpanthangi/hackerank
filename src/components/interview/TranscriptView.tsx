@@ -42,7 +42,7 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({ className = '' }
                   >
                     {line.speaker}:
                   </span>
-                  <span className="text-text-primary">{line.text}</span>
+                  <span className="text-black">{line.text}</span>
                 </div>
                 <div className="text-xs text-text-secondary mt-1">
                   {line.timestamp.toLocaleTimeString()}
@@ -56,4 +56,4 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({ className = '' }
   );
 };
 
-export default TranscriptView; 
+export default TranscriptView;
